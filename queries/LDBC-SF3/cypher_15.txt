@@ -1,0 +1,6 @@
+MATCH (n0:Forum { id: '6630158' })-[:hasMember]->(n1:Person) RETURN n0.id, n1.id
+MATCH (n0:Forum )-[:hasMember]->(n1:Person), (n1:Person)-[:studyAt]->(n2:Organisation), (n1:Person)-[:likes]->(n3:Post), (n3:Post)-[:hasCreator]->(n1:Person) RETURN n1.id, n3.id, n2.id, n0.id
+MATCH (n1:Person)-[:studyAt]->(n2:Organisation) RETURN n2.id, n1.id
+MATCH (n1:Person)-[:likes]->(n3:Post), (n3:Post)-[:isLocatedIn]->(n4:Place), (n3:Post)-[:hasTag]->(n5:Tag), (n3:Post)-[:hasCreator]->(n1:Person) RETURN n3.id, n5.id, n4.id, n1.id
+MATCH (n3:Post)-[:isLocatedIn]->(n4:Place) RETURN n4.id, n3.id
+MATCH (n3:Post)-[:hasTag]->(n5:Tag) RETURN n5.id, n3.id

@@ -1,0 +1,6 @@
+MATCH (n0:Person { id: '87122207' })-[:likes]->(n1:Comment) RETURN n0.id, n1.id
+MATCH (n0:Person )-[:likes]->(n1:Comment), (n1:Comment)-[:hasCreator]->(n2:Person), (n1:Comment)-[:replyOf]->(n5:Comment) RETURN n1.id, n5.id, n2.id, n0.id
+MATCH (n1:Comment)-[:hasCreator]->(n2:Person), (n2:Person)-[:hasInterest]->(n3:Tag), (n2:Person)-[:workAt]->(n4:Organisation) RETURN n2.id, n4.id, n3.id, n1.id
+MATCH (n2:Person)-[:hasInterest]->(n3:Tag) RETURN n3.id, n2.id
+MATCH (n2:Person)-[:workAt]->(n4:Organisation) RETURN n4.id, n2.id
+MATCH (n1:Comment)-[:replyOf]->(n5:Comment) RETURN n5.id, n1.id

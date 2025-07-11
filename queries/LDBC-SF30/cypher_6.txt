@@ -1,0 +1,5 @@
+MATCH (n0:Forum { id: '87277431' })-[:hasModerator]->(n1:Person) RETURN n0.id, n1.id
+MATCH (n0:Forum )-[:hasModerator]->(n1:Person), (n1:Person)-[:likes]->(n2:Comment), (n1:Person)-[:isLocatedIn]->(n3:Place) RETURN n1.id, n3.id, n2.id, n0.id
+MATCH (n1:Person)-[:likes]->(n2:Comment), (n2:Comment)-[:replyOf]->(n4:Comment) RETURN n2.id, n4.id, n1.id
+MATCH (n1:Person)-[:isLocatedIn]->(n3:Place) RETURN n3.id, n1.id
+MATCH (n2:Comment)-[:replyOf]->(n4:Comment) RETURN n4.id, n2.id

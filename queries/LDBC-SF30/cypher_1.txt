@@ -1,0 +1,5 @@
+MATCH (n0:Forum { id: '88468612' })-[:containerOf]->(n1:Post) RETURN n0.id, n1.id
+MATCH (n0:Forum )-[:containerOf]->(n1:Post), (n1:Post)-[:hasCreator]->(n2:Person), (n1:Post)-[:hasTag]->(n3:Tag) RETURN n1.id, n3.id, n2.id, n0.id
+MATCH (n1:Post)-[:hasCreator]->(n2:Person), (n2:Person)-[:knows]->(n4:Person) RETURN n2.id, n4.id, n1.id
+MATCH (n1:Post)-[:hasTag]->(n3:Tag) RETURN n3.id, n1.id
+MATCH (n2:Person)-[:knows]->(n4:Person) RETURN n4.id, n2.id

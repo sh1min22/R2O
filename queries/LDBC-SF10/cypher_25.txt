@@ -1,0 +1,6 @@
+MATCH (n0:Comment { id: '27968920' })-[:replyOf]->(n1:Comment) RETURN n0.id, n1.id
+MATCH (n0:Comment )-[:replyOf]->(n1:Comment), (n1:Comment)-[:hasCreator]->(n2:Person), (n1:Comment)-[:hasTag]->(n3:Tag) RETURN n1.id, n3.id, n2.id, n0.id
+MATCH (n1:Comment)-[:hasCreator]->(n2:Person), (n2:Person)-[:isLocatedIn]->(n4:Place), (n2:Person)-[:knows]->(n5:Person) RETURN n2.id, n5.id, n4.id, n1.id
+MATCH (n1:Comment)-[:hasTag]->(n3:Tag) RETURN n3.id, n1.id
+MATCH (n2:Person)-[:isLocatedIn]->(n4:Place) RETURN n4.id, n2.id
+MATCH (n2:Person)-[:knows]->(n5:Person) RETURN n5.id, n2.id
