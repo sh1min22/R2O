@@ -1,0 +1,4 @@
+MATCH (n0:Node {id: "3897289"})-[:team]->(n3:Node) RETURN n0.id, n3.id
+MATCH (n1:Node)-[:location]->(n3:Node) RETURN n1.id, n3.id
+MATCH (n2:Node)-[:wikiPageWikiLink]->(n3:Node) RETURN n2.id, n3.id
+MATCH (n0:Node)-[:team]->(n3:Node), (n1:Node)-[:location]->(n3:Node), (n2:Node)-[:wikiPageWikiLink]->(n3:Node) RETURN n0.id, n1.id, n2.id, n3.id 
