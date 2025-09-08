@@ -19,6 +19,7 @@ from typing import Union, List, Set, Tuple
 import json
 from py2neo import Graph
 from collections import defaultdict
+from collections import Counter
 
 from utils.logger import logger
 
@@ -44,6 +45,11 @@ EDGE_COUNTS = {
     "isPartOf": 1454,
     "isSubclassOf": 70
 }
+
+# 形如 (u:Label {...})-[:REL]->(v:Label {...})
+REL_PAT = re.compile(
+    r"\(\s*(?P<u>\w+)\s*[^)]*\)\s*-\s*\[:\s*(?P<rel>\w+)\s*\]\s*->\s*\(\s*(?P<v>\w+)\s*[^)]*\)"
+)
 
 
 def merge_to_list(a, b):
@@ -318,6 +324,178 @@ def rewrite_return_clause(return_clause):
     rewritten_clause = " RETURN " + ", ".join(rewritten_parts)
     return rewritten_clause
 
+def homomorphize_cypher(query: str) -> str:
+    q = " ".join(query.strip().split())
+    m = re.search(r"\bMATCH\b", q, re.IGNORECASE)
+    r = re.search(r"\bRETURN\b", q, re.IGNORECASE)
+    if not m or not r:
+        return query
+    match_start, ret_pos = m.start(), r.start()
+    return_part = q[ret_pos + len("RETURN"):].strip()
+
+    w = re.search(r"\bWHERE\b", q[match_start:ret_pos], re.IGNORECASE)
+    if w:
+        where_pos = match_start + w.start()
+        match_part = q[match_start:where_pos].strip()
+        where_part = q[where_pos + len("WHERE"):ret_pos].strip()
+    else:
+        match_part, where_part = q[match_start:ret_pos].strip(), ""
+
+    match_body = match_part[5:].strip() if match_part[:5].upper() == "MATCH" else match_part
+
+    pats = list(REL_PAT.finditer(match_body))
+    if len(pats) <= 1:
+        return query  # 单边不处理
+
+    edges = [(pm.group("u"), pm.group("rel"), pm.group("v")) for pm in pats]
+
+    # 选锚点
+    deg = Counter()
+    for u, _, v in edges:
+        deg[u] += 1; deg[v] += 1
+    max_deg = max(deg.values())
+    candidates = [n for n,c in deg.items() if c == max_deg]
+    fu,_,fv = edges[0]
+    anchor = fu if fu in candidates else (fv if fv in candidates else candidates[0])
+
+    # 基准边
+    base_idx = next(i for i,(u,_,v) in enumerate(edges) if anchor in (u,v))
+    base_u, base_rel, base_v = edges[base_idx]
+    base_text = pats[base_idx].group(0)
+
+    known = {base_u, base_v}
+    carry_vars = [base_u, base_v]
+
+    # WHERE 子句拆分与登记
+    where_conjs = _split_where_conjs(where_part)
+    pending_where = [{"text":c, "vars":_vars_in_expr(c), "_placed":False} for c in where_conjs]
+
+    pending = list(range(len(edges)))
+    pending.remove(base_idx)
+
+    out = []
+    out.append(f"MATCH {base_text}")
+
+    # 阶段0可前置的 WHERE
+    _flush_where_if_ready(out, pending_where, known)
+
+    rel_i = 0
+    wave = 0
+    while pending:
+        wave_edges = [idx for idx in pending if edges[idx][0] in known or edges[idx][2] in known]
+        if not wave_edges:
+            break
+
+        list_defs, list_aliases = [], []
+
+        # 本波：OPTIONAL MATCH + collect
+        for idx in wave_edges:
+            u, rel, v = edges[idx]
+            raw = pats[idx].group(0)
+            rel_i += 1
+            rvar = f"r{rel_i}"
+            L = f"L{len(list_defs)+1}"
+            list_aliases.append(L)
+            raw_with_r = re.sub(r"\[\s*:\s*"+re.escape(rel)+r"\s*\]", f"[{rvar}:{rel}]", raw)
+
+            if (u in known) and (v in known):
+                out.append(f"OPTIONAL MATCH {raw_with_r}")
+                out.append(_with_line(carry_vars, list_aliases[:-1], f"collect({{r:{rvar}}}) AS {L}"))
+                list_defs.append((L, {}))
+            elif (u in known) and (v not in known):
+                out.append(f"OPTIONAL MATCH {raw_with_r}")
+                out.append(_with_line(carry_vars, list_aliases[:-1], f"collect({{n:{v}, r:{rvar}}}) AS {L}"))
+                list_defs.append((L, {v:"n"}))
+            elif (v in known) and (u not in known):
+                out.append(f"OPTIONAL MATCH {raw_with_r}")
+                out.append(_with_line(carry_vars, list_aliases[:-1], f"collect({{n:{u}, r:{rvar}}}) AS {L}"))
+                list_defs.append((L, {u:"n"}))
+            else:
+                # 理论不会到这（本波至少一端已知）
+                out.append(f"OPTIONAL MATCH {raw_with_r}")
+                out.append(_with_line(carry_vars, list_aliases[:-1], f"collect({{u:{u}, v:{v}, r:{rvar}}}) AS {L}"))
+                list_defs.append((L, {u:"u", v:"v"}))
+
+        # 本波：依次 UNWIND 绑定新变量
+        for j,(L,mapping) in enumerate(list_defs, start=1):
+            x = f"x{wave+1}_{j}"
+            out.append(f"UNWIND {L} AS {x}")
+            remaining_lists = [ld[0] for ld in list_defs][j:]
+            with_items = list(carry_vars) + remaining_lists
+            projections = [f"{x}.{field} AS {var_name}" for var_name,field in mapping.items()]
+            for var_name in mapping.keys():
+                if var_name not in known:
+                    known.add(var_name); carry_vars.append(var_name)
+
+            if with_items and projections:
+                out.append("WITH " + ", ".join(with_items) + ", " + ", ".join(projections))
+            elif with_items:
+                out.append("WITH " + ", ".join(with_items))
+            elif projections:
+                out.append("WITH " + ", ".join(projections))
+            else:
+                out.append(f"WITH {x}")
+
+        # 本波结束：安放此时可用的 WHERE（合并为一条）
+        _flush_where_if_ready(out, pending_where, known)
+
+        for idx in wave_edges:
+            pending.remove(idx)
+        wave += 1
+
+    # 收尾：剩余条件一次性合并为单条 WHERE
+    unplaced = [w["text"] for w in pending_where if not w["_placed"]]
+    if unplaced:
+        _append_where(out, " AND ".join(unplaced))
+
+    out.append(f"RETURN {return_part}")
+    return "\n".join(out)
+
+
+# ---------- 辅助 ----------
+
+def _split_where_conjs(where_part: str):
+    if not where_part: return []
+    parts = re.split(r"\bAND\b", where_part, flags=re.IGNORECASE)
+    return [p.strip() for p in parts if p.strip()]
+
+def _vars_in_expr(expr: str):
+    tokens = re.findall(r"[A-Za-z_]\w*", expr)
+    blacklist = {
+        "AND","OR","NOT","IN","IS","NULL","TRUE","FALSE","EXISTS","SIZE","CASE","WHEN","THEN","ELSE","END",
+        "id","labels","keys","toInteger","toFloat","toString","coalesce"
+    }
+    vars_found = set()
+    for t in tokens:
+        if t.upper() in blacklist: 
+            continue
+        vars_found.add(t)
+    return vars_found
+
+def _with_line(carry_vars: list, prev_lists: list, tail: str) -> str:
+    items = []
+    if carry_vars: items += carry_vars
+    if prev_lists: items += prev_lists
+    return "WITH " + (", ".join(items) + ", " if items else "") + tail
+
+def _append_where(out_lines: list, clause: str):
+    """安全追加 WHERE：若上一行已是 WHERE，则合并为一条。"""
+    if not clause:
+        return
+    if out_lines and out_lines[-1].strip().upper().startswith("WHERE "):
+        prev = out_lines.pop()
+        merged = prev + " AND " + clause
+        out_lines.append(merged)
+    else:
+        out_lines.append("WHERE " + clause)
+
+def _flush_where_if_ready(out_lines, pending_where, known_vars):
+    ready = [w for w in pending_where if (not w["_placed"]) and w["vars"].issubset(known_vars)]
+    if ready:
+        _append_where(out_lines, " AND ".join(w["text"] for w in ready))
+        for w in ready:
+            w["_placed"] = True
+
 
 @dataclass
 class SubQuery:
@@ -433,6 +611,7 @@ class QueryHandler:
                     modified_query = f"{query} AND {min_node}.id IN $ids " + return_str
                 else:
                     modified_query = f"{query} WHERE {min_node}.id IN $ids " + return_str
+                modified_query = homomorphize_cypher(modified_query)
                 try:
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         futures = [
@@ -450,6 +629,7 @@ class QueryHandler:
 
         else:
             query_sentence = query + return_str
+            query_sentence = homomorphize_cypher(query_sentence)
             try:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     futures = [
