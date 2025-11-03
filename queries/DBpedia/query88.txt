@@ -1,0 +1,7 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Beverly_Hills,_90210> <http://dbpedia.org/ontology/starring> ?n2 .
+  ?n1 <http://dbpedia.org/ontology/order> ?n3 .
+  ?n0 <http://dbpedia.org/ontology/starring> ?n2 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+}

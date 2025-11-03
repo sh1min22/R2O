@@ -1,0 +1,7 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Atanquez> <http://dbpedia.org/property/subdivisionName> ?n2 .
+  ?n1 <http://dbpedia.org/property/subdivisionType> ?n3 .
+  ?n0 <http://dbpedia.org/property/subdivisionName> ?n2 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+}

@@ -1,0 +1,6 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Spain_12%E2%80%931_Malta> <http://dbpedia.org/ontology/team> ?n3 .
+  ?n1 <http://dbpedia.org/ontology/location> ?n3 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+}

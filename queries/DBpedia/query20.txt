@@ -1,0 +1,6 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Wanted> <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n2 .
+  ?n1 <http://xmlns.com/foaf/0.1/primaryTopic> ?n3 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n3 .
+}

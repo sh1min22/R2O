@@ -1,0 +1,8 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Dujardin>  <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n2 .
+  ?n1 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+  ?n0 <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n2 .
+  ?n2 <http://purl.org/dc/terms/subject> ?n3 .
+}
+

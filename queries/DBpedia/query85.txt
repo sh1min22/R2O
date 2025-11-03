@@ -1,0 +1,7 @@
+SELECT ?n0 ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Exeter,_California> <http://www.w3.org/2002/07/owl#sameAs> ?n3 .
+  ?n1 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+  ?n2 <http://www.w3.org/2002/07/owl#sameAs> ?n3 .
+  ?n0 <http://www.w3.org/2002/07/owl#sameAs> ?n3 .
+}

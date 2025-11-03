@@ -1,0 +1,6 @@
+SELECT ?n0 ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Aritz_L%C3%B3pez_Garai> <http://dbpedia.org/ontology/team>  ?n3 .
+  ?n1 <http://dbpedia.org/ontology/team>  ?n3 .
+  ?n2 <http://dbpedia.org/ontology/birthPlace> ?n3 .
+}

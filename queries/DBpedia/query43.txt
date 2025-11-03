@@ -1,0 +1,7 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Mark_Guardado> <http://nl.dbpedia.org/property/familie> ?n1 .
+  ?n0 <http://nl.dbpedia.org/property/familie> ?n1 .
+  ?n1 <http://www.w3.org/2002/07/owl#sameAs> ?n3 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageRedirects> ?n3 .
+}

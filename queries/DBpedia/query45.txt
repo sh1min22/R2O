@@ -1,0 +1,7 @@
+SELECT ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Cernavod%C4%83_Nuclear_Power_Plant> <http://dbpedia.org/ontology/wikiPageWikiLink> ?n2 .
+  ?n1 <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n3 .
+  ?n0 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n2 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+}

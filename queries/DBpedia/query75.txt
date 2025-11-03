@@ -1,0 +1,7 @@
+SELECT ?n0 ?n1 ?n2 ?n3
+WHERE {
+  <http://en.wikipedia.org/wiki/Zbigniew_Marciniak> <http://xmlns.com/foaf/0.1/primaryTopic?> ?n2 .
+  ?n0 <http://xmlns.com/foaf/0.1/primaryTopic?> ?n2 .
+  ?n2 <http://dbpedia.org/ontology/wikiPageWikiLink> ?n3 .
+  ?n1 <http://purl.org/dc/terms/subject> ?n3 .
+}

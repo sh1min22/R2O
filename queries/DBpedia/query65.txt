@@ -1,0 +1,7 @@
+SELECT ?n0 ?n1 ?n2 ?n3
+WHERE {
+  <http://dbpedia.org/resource/Pembroke> <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n2 . 
+  ?n1 <http://www.w3.org/2002/07/owl#sameAs> ?n3 . 
+  ?n0 <http://dbpedia.org/ontology/wikiPageDisambiguates> ?n2 . 
+  ?n2 <http://www.w3.org/2002/07/owl#sameAs> ?n3 . 
+}
